@@ -23,7 +23,7 @@ using SparseArrays
   # H : original Hamiltonian of A (B) ;  H_enlarge: Hamiltonian of A .. B
   ##struct Block
   ##  length :: Int  # length of system L(A)
-  ##  basis_number :: Int # number of basis (D) after cutoff
+  ##  basis_number :: Int # number of basis (Lmax) after cutoff
   ##  hamintonain :: AbstractMatrix{Float64}
   ##end
 
@@ -49,4 +49,21 @@ using SparseArrays
     # starting point:two sites ..
 
     # ground state : eigenstate with smallest eigenvalue
-    Block.hamintonain = H2(sp,sz,sp,sz)
+    H_initial = H2(sp,sz,sp,sz)
+    gs = eigen(H_initial).vectors[:,1]  #ground state
+
+    # reduced density matrix rho
+     # actually, this process is unnecessary, because we already have identical
+     # A, B points (starting with two identical spins)
+     U = reshape(gs,2,2)
+     rho = U * U'
+     psi = eigen(rho)
+
+     # for the purpose of consistance in form, we define a projection operator
+     psi_vectors = psi.vectors
+     P = psi_vectors[:,1] * psi_vectors'[1,:] + psi_vectors[:,2] * psi_vectors'[2,:]
+
+    # single dmrg step
+    const Lmax = 1000  # we only keep maximum 1000 states
+    L = 1              # 2L is the number of sites
+    dim = 2^L          # dimension of wave functions
