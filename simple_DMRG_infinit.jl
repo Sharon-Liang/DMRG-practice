@@ -21,17 +21,17 @@ using SparseArrays
   # construct Hamiltonian
   # two H-matrix are needed : H and  H_enlarge
   # H : original Hamiltonian of A (B) ;  H_enlarge: Hamiltonian of A .. B
-  struct Block
-    length :: Int  # length of system L(A)
-    basis_number :: Int # number of basis (D) after cutoff
-    hamintonain :: AbstractMatrix{Float64}
-  end
+  ##struct Block
+  ##  length :: Int  # length of system L(A)
+  ##  basis_number :: Int # number of basis (D) after cutoff
+  ##  hamintonain :: AbstractMatrix{Float64}
+  ##end
 
-  struct Block_enlarge
-    length :: Int  # length of system A .. B
-    basis_number :: Int # number of basis (D) after cutoff
-    hamintonain :: AbstractMatrix{Float64}
-  end
+  ##struct Block_enlarge
+    ##length :: Int  # length of system A .. B
+    ##basis_number :: Int # number of basis (D) after cutoff
+    ##hamintonain :: AbstractMatrix{Float64}
+  ##end
 
   # A fuction need to constract Hamiltonian
     # single site Hamiltonian
@@ -49,5 +49,4 @@ using SparseArrays
     # starting point:two sites ..
 
     # ground state : eigenstate with smallest eigenvalue
-
-    
+    Block.hamintonain = H2(sp,sz,sp,sz)
