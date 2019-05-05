@@ -18,21 +18,6 @@ using SparseArrays
   const J = 1
   const Jz = 1
 
-  # construct Hamiltonian
-  # two H-matrix are needed : H and  H_enlarge
-  # H : original Hamiltonian of A (B) ;  H_enlarge: Hamiltonian of A .. B
-  ##struct Block
-  ##  length :: Int  # length of system L(A)
-  ##  basis_number :: Int # number of basis (Lmax) after cutoff
-  ##  hamintonain :: AbstractMatrix{Float64}
-  ##end
-
-  ##struct Block_enlarge
-    ##length :: Int  # length of system A .. B
-    ##basis_number :: Int # number of basis (D) after cutoff
-    ##hamintonain :: AbstractMatrix{Float64}
-  ##end
-
   # A fuction need to constract Hamiltonian
     # single site Hamiltonian
     H1 = zeros(Float64,2,2)
@@ -42,28 +27,54 @@ using SparseArrays
       J/2 * (kron(sp1,sp2') + kron(sp1',sp2)) + Jz * kron(sz1,sz2)
     end
 
-    # complete Hamiltonian
-    # only two sites are different
+    # Hamiltonain of A .. B
+    ## should add a projection operator
+    function H3(len, block)
+      # dimesion of A part
+      d = 2^len
+      # unit matrices needed
+      unit2 = Matrix{Float64}(I, 2, 2)
+      unit = Matrix{Float64}(I, d, d)
+      unit_plus = Matrix{Float64}(I, d * 2, d * 2)
+      unit_minus = Matrix{Float64}(I, d / 2, d / 2)
+      # hamiltonian of A.
+      half = kron(block,unit2) + kron(unit_minus, H2(sp,sz,sp,sz))
+      # hamiltonian of A..B
+      kron(half,unit_plus) + kron(unit_plus, half) + kron( kron(unit, H2(sp,sz,sp,sz)), unit)
+    end
 
+  # circulation
+  const Lmax = 20     # we count Lmax * 2 sites in total
+  const D = 1000      # we only keep maximum 1000 states, 9 points exact
 
-    # starting point:two sites ..
+  for L = 1 : Lmax
+    # dim : dimension of total Hilbert space
+    dim = 2^L
+
+    if L = 1
+      # h is hamiltonian for 4 points . . . .
+      h = H3(L,H1)
+    else
+      h = H3(L,half_new)
+    end
 
     # ground state : eigenstate with smallest eigenvalue
-    H_initial = H2(sp,sz,sp,sz)
-    gs = eigen(H_initial).vectors[:,1]  #ground state
+    gs = eigen(h).vectors[:,1]  # ground state
+    len = sqrt( length(gs) )    # length of new half: L+1
 
     # reduced density matrix rho
-     # actually, this process is unnecessary, because we already have identical
-     # A, B points (starting with two identical spins)
-     U = reshape(gs,2,2)
-     rho = U * U'
-     psi = eigen(rho)
+    U = reshape(gs,len.len)
+    rho = U * U'
 
-     # for the purpose of consistance in form, we define a projection operator
-     psi_vectors = psi.vectors
-     P = psi_vectors[:,1] * psi_vectors'[1,:] + psi_vectors[:,2] * psi_vectors'[2,:]
+    # projection operator
+    if len < D
+      P = psi.vectors
+    else
+      psi = eigen(rho)   # eigenvalues and eigenvectors : small -> large
+      P = psi.vectors[:, len_cut - D -1, len_cut]
+    end
 
-    # single dmrg step
-    const Lmax = 1000  # we only keep maximum 1000 states
-    L = 1              # 2L is the number of sites
-    dim = 2^L          # dimension of wave functions
+    # projected Hamiltonian
+    half_new = P'* h * P
+  end
+    
