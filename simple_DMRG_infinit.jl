@@ -18,7 +18,25 @@ using SparseArrays
   const J = 1
   const Jz = 1
 
-  # A fuction need to constract Hamiltonian
+  # Two struct are needed to store A and A.
+  # one is input, one is output
+  # length is the length of A or A.
+  # basis_dim is the dimension of the Hilbert space
+  # basis_dim is used to constract unit matrix afterwards
+  struct Block
+    length :: Int
+    basis_dim :: Int
+    operator_dict :: Dict{Symbol,AbstractMatrix{Float64}}
+  end
+
+  struct EnlargedBlock
+    length :: Int
+    basis_dim :: Int
+    operator_dict :: Dict{Symbol,AbstractMatrix{Float64}}
+  end
+
+
+  # Constract Hamiltonian
     # single site Hamiltonian
     H1 = zeros(Float64,2,2)
 
@@ -27,23 +45,42 @@ using SparseArrays
       J/2 * (kron(sp1,sp2') + kron(sp1',sp2)) + Jz * kron(sz1,sz2)
     end
 
-    # Hamiltonain of A .. B
-    ## should add a projection operator
-    function H3(len, block)
+    # Hamiltonain of A .
+    function enlarge(block :: Block)
+             # NOTE: input is the kind of block !
+             # We have a lot of imputs !
       # dimesion of A part
-      d = 2^len
+      d = block.basis_dim
+      o = block.operator_dict
+
       # unit matrices needed
-      unit2 = Matrix{Float64}(I, 2, 2)
-      unit = Matrix{Float64}(I, d, d)
-      unit_plus = Matrix{Float64}(I, d * 2, d * 2)
-      unit_minus = Matrix{Float64}(I, d / 2, d / 2)
+      I2 = Matrix{Float64}(I, 2, 2)
+      Iblock = Matrix{Float64}(I, d, d)
+
       # hamiltonian of A.
+      enlarged_operator_dict = Dict{Symbol,AbstractMatrix{Float64}}(
+                             :H => kron(o[:H],I2) + kron(Iblock,H1) + H2(o[:conn_sp],o[:conn_sz],sp,sz)
+                             :conn_sp => kron(Iblock,o[:conn_sp])
+                             :conn_sz => kron(Iblock,o[:conn_sz])
+                              )
       half = kron(block,unit2) + kron(unit_minus, H2(sp,sz,sp,sz))
-      # hamiltonian of A..B
-      kron(half,unit_plus) + kron(unit_plus, half) + kron( kron(unit, H2(sp,sz,sp,sz)), unit)
+      return EnlargedBlock(block.length + 1,
+                            d * 2,
+                            enlarged_operator_dict)
     end
 
-  # circulation
+    # initialize Hamiltonian : single site .
+    H_initial = Dict{Symbol,AbstractMatrix{Float64}}(
+               :H => H1
+               :conn_sp => sp
+               :conn_sz => sz
+    )
+
+
+
+
+
+# circulation
   const Lmax = 20     # we count Lmax * 2 sites in total
   const D = 1000      # we only keep maximum 1000 states, 9 points exact
 
@@ -71,10 +108,9 @@ using SparseArrays
       P = psi.vectors
     else
       psi = eigen(rho)   # eigenvalues and eigenvectors : small -> large
-      P = psi.vectors[:, len_cut - D -1, len_cut]
+      P = psi.vectors[:, len - D -1, len]
     end
 
     # projected Hamiltonian
     half_new = P'* h * P
   end
-    
